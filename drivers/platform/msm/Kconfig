@@ -76,6 +76,7 @@ config QPNP_CLKDIV
 config QPNP_VIBRATOR
 	tristate "Vibrator support for QPNP PMIC"
 	depends on OF_SPMI
+	depends on ANDROID_TIMED_OUTPUT
 	help
 	  This option enables device driver support for the vibrator
 	  on the Qualcomm's QPNP PMICs. The vibrator is connected on the

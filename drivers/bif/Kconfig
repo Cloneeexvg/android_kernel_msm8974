@@ -15,6 +15,7 @@ if BIF
 config BIF_QPNP
 	depends on SPMI
 	depends on OF_SPMI
+	depends on ANDROID_TIMEOUT_OUTPUT
 	tristate "Qualcomm QPNP BIF support"
 	help
 	  This driver supports the QPNP BSI peripheral found inside of Qualcomm
