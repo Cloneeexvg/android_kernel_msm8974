@@ -90,14 +90,6 @@ void afe_set_aanc_info(struct aanc_data *q6_aanc_info)
 		this_afe.aanc_info.aanc_tx_port);
 }
 
-static bool afe_token_is_valid(uint32_t token)
-{
-    if (token >= AFE_MAX_PORTS) {
-	pr_err("%s: token %d is invalid.\n", __func__, token);
-	return false;
-    }
-    return true;
-}
 
 static int32_t afe_callback(struct apr_client_data *data, void *priv)
 {
@@ -148,13 +140,7 @@ static int32_t afe_callback(struct apr_client_data *data, void *priv)
 			this_afe.calib_data.res_cfg.th_vi_ca_state);
 		} else
 			atomic_set(&this_afe.state, -1);
-		if (afe_token_is_valid(data->token))
-		    if (afe_token_is_valid(data->token))
-			wake_up(&this_afe.wait[data->token]);
-		    else
-		    return -EINVAL;
-		else
-		return -EINVAL;
+		wake_up(&this_afe.wait[data->token]);
 	} else if (data->payload_size) {
 		uint32_t *payload;
 		uint16_t port_id = 0;
@@ -181,10 +167,7 @@ static int32_t afe_callback(struct apr_client_data *data, void *priv)
 			case AFE_PORTS_CMD_DTMF_CTL:
 			case AFE_SVC_CMD_SET_PARAM:
 				atomic_set(&this_afe.state, 0);
-				if (afe_token_is_valid(data->token))
-				    wake_up(&this_afe.wait[data->token]);
-				else
-				return -EINVAL;
+				wake_up(&this_afe.wait[data->token]);
 				break;
 			case AFE_SERVICE_CMD_REGISTER_RT_PORT_DRIVER:
 				break;
