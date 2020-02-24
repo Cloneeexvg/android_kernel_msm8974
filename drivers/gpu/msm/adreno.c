@@ -1730,7 +1730,7 @@ static int adreno_of_get_pdata(struct platform_device *pdev)
 	/* get pm-qos-latency from target, set it to default if not found */
 	if (adreno_of_read_property(pdev->dev.of_node, "qcom,pm-qos-latency",
 		&pdata->pm_qos_latency))
-		pdata->pm_qos_latency = 501;
+		pdata->pm_qos_latency = 1000;
 
 
 	if (adreno_of_read_property(pdev->dev.of_node, "qcom,idle-timeout",
