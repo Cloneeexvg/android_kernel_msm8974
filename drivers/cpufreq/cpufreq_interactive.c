@@ -27,6 +27,7 @@
 #include <linux/time.h>
 #include <linux/timer.h>
 #include <linux/workqueue.h>
+#include <linux/earlysuspend.h>
 #include <linux/kthread.h>
 #include <linux/slab.h>
 #include <linux/kernel_stat.h>
@@ -61,6 +62,8 @@ static DEFINE_PER_CPU(struct cpufreq_interactive_cpuinfo, cpuinfo);
 /* realtime thread handles frequency scaling */
 static struct task_struct *speedchange_task;
 static cpumask_t speedchange_cpumask;
+static unsigned int registration = 0;
+static unsigned int enabled = 0;
 static spinlock_t speedchange_cpumask_lock;
 static struct mutex gov_lock;
 
@@ -699,6 +702,32 @@ static void cpufreq_interactive_boost(void)
 		wake_up_process(speedchange_task);
 }
 
+static void interactive_suspend(int suspend)
+{
+        if (!enabled) return;
+    if (!suspend) { 
+                if (num_online_cpus() < 2) cpu_up(1);
+                pr_info("[imoseyon] interactivex awake cpu1 up\n");
+    } else {
+                if (num_online_cpus() > 1) cpu_down(1);
+                pr_info("[imoseyon] interactivex suspended cpu1 down\n");
+    }
+}
+
+static void interactive_early_suspend(struct early_suspend *handler) {
+      if (!registration) interactive_suspend(1);
+}
+
+static void interactive_late_resume(struct early_suspend *handler) {
+     interactive_suspend(0);
+}
+
+static struct early_suspend interactive_power_suspend = {
+        .suspend = interactive_early_suspend,
+        .resume = interactive_late_resume,
+        .level = EARLY_SUSPEND_LEVEL_DISABLE_FB + 1,
+};
+
 static int cpufreq_interactive_notifier(
 	struct notifier_block *nb, unsigned long val, void *data)
 {
@@ -1266,14 +1295,18 @@ static int cpufreq_governor_interactive(struct cpufreq_policy *policy,
 
 		rc = sysfs_create_group(cpufreq_global_kobject,
 				&interactive_attr_group);
-		if (rc) {
-			mutex_unlock(&gov_lock);
-			return rc;
-		}
+//		if (rc) {
+//			mutex_unlock(&gov_lock);
+//			return rc;
+//		}
 
 		idle_notifier_register(&cpufreq_interactive_idle_nb);
 		cpufreq_register_notifier(
 			&cpufreq_notifier_block, CPUFREQ_TRANSITION_NOTIFIER);
+		enabled = 1;
+		registration = 1;
+		register_early_suspend(&interactive_power_suspend);
+		registration = 0;
 		mutex_unlock(&gov_lock);
 		break;
 
@@ -1297,8 +1330,10 @@ static int cpufreq_governor_interactive(struct cpufreq_policy *policy,
 		cpufreq_unregister_notifier(
 			&cpufreq_notifier_block, CPUFREQ_TRANSITION_NOTIFIER);
 		idle_notifier_unregister(&cpufreq_interactive_idle_nb);
-		sysfs_remove_group(cpufreq_global_kobject,
-				&interactive_attr_group);
+//		sysfs_remove_group(cpufreq_global_kobject,
+//				&interactive_attr_group);
+		enabled = 0;
+		unregister_early_suspend(&interactive_power_suspend);
 		mutex_unlock(&gov_lock);
 
 		break;
